@@ -10,7 +10,7 @@ import time
 Gst.init(None)
 
 # Path dẫn đến model .ONNX
-onnx_model_path = "/path/to/your/model.onnx"
+onnx_model_path = "/model.onnx"
 
 # Khởi tạo DeepStream pipeline
 def create_pipeline(camera_source, onnx_model_path):
