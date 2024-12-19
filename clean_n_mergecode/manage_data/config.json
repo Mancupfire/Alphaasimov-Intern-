@@ -1,0 +1,24 @@
+{
+    "package": {
+        "name": "batch_34",
+        "location": {
+            "local_storage": "/media/asimovsimpc/bulldog/zip_data_container",
+            "remote_storage": "/aa-ai-storage/"
+        }
+    },
+    "criteria":{
+        "scenario": "mix",
+        "date": "2024_05_12",
+        "time": "6:00-23:00 "
+    },
+    "local_storage": {
+        "ssh_address": null,
+        "directory": "/media/asimovsimpc/bulldog/aa-data/extracted_data/alaska/umtn-tele-joystick/ocp/"
+    },
+
+    "remote_storage": {
+        "server_type": "aws",
+        "ssh_address": "vishc",
+        "aws_bucket": "s3"
+    }
+}
