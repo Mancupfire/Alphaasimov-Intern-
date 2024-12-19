@@ -1,9 +1,0 @@
-[property]
-gpu-id=0
-net-scale-factor=0.017
-model-engine-file=your_model.engine
-input-dims=3;1280;1280;1
-uff-input-blob-name=input_1
-output-blob-names=output
-batch-size=1
-process-mode=1
