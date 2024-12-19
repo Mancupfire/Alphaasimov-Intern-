@@ -1,0 +1,16 @@
+{   
+    "path": "/media/asimovsimpc/bulldog3/aa-data/extracted_data/bulldog/umtn-tele-joystick/ocp/mix/2024_11_30",
+    
+    "frame_config": {
+        "front_camera":{
+            "font_color": [0, 0, 255], 
+            "frame_rate": 200,
+            "fr_size": 1
+        },
+        "routed_map": {
+            "font_color": [255, 0, 0], 
+            "frame_rate": 200,
+            "fr_size": 2
+        }
+    }
+}
