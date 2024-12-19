@@ -1,0 +1,30 @@
+{
+    "full_scenarios": false,
+    "data_paths": {
+        "/media/asimovsimpc/bulldog/aa-data/extracted_data/bulldog/umtn-tele-joystick/ocp": {
+            "location": "ocp"
+        },
+        "/media/asimovsimpc/bulldog3/aa-data/extracted_data/bulldog/umtn-tele-joystick/pnk": {
+            "location": "pnk"
+        }
+    },
+    "silent": false,
+
+    "frame_config": {
+        "ocp": {
+            "center": [105.94797992, 20.994358],
+            "zoom": 15,
+            "marker_size": 4,
+            "height": 1100,
+            "width": 1400
+        },
+        "pnk": {
+            "center": [105.747700, 20.961471],
+            "zoom": 17,
+            "marker_size": 4,
+            "height": 1100,
+            "width": 1400
+        }
+    }
+
+}
