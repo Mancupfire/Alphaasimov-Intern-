@@ -10,7 +10,7 @@ import json
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-data_folder = "[Folder Here]"
+data_folder = "/media/asimovsimpc/bulldog/aa-data/bulldog/umtn-tele/ocp/2024_11_18_b05"
 output_folder = os.path.join(data_folder, "data_output")
 
 os.makedirs(output_folder, exist_ok=True)
