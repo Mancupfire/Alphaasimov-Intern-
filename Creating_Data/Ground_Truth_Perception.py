@@ -22,9 +22,13 @@ segmentation_model = fcn_resnet50(pretrained=True).to(device).eval()
 detection_model = fasterrcnn_resnet50_fpn(pretrained=True).to(device).eval()
 
 def load_image(image_path):
-    img = Image.open(image_path).convert("RGB")
-    img = transforms.ToTensor()(img).unsqueeze(0).to(device)
-    return img
+    try:
+        img = Image.open(image_path).convert("RGB")
+        img = transforms.ToTensor()(img).unsqueeze(0).to(device)
+        return img
+    except Exception as e:
+        print(f"Không thể tải ảnh {image_path}: {e}")
+        return None
 
 def save_segmentation_mask(mask, image_name):
     mask = mask[0].cpu().detach().numpy()
@@ -46,26 +50,27 @@ def save_bounding_boxes(bboxes, labels, image_name):
 
 def save_road_mask(road_mask, image_name):
     road_mask = road_mask[0].cpu().detach().numpy()
-    road_mask = (road_mask > 0.5).astype(np.uint8)  
+    road_mask = (road_mask > 0.5).astype(np.uint8)
     road_mask_img = Image.fromarray(road_mask)
     road_mask_img.save(os.path.join(output_folder, "free_road_masks", f"{image_name}_road_mask.png"))
 
 def process_image(image_path, image_name):
     image = load_image(image_path)
-    
+    if image is None:
+        return
+
     with torch.no_grad():
         output = segmentation_model(image)
         save_segmentation_mask(output['out'], image_name)
-    
-    with torch.no_grad():
+        
         detection_output = detection_model(image)
         save_bounding_boxes(detection_output[0]['boxes'], detection_output[0]['labels'], image_name)
 
-    road_mask = output['out'].cpu().detach().numpy()
-    save_road_mask(road_mask, image_name)
+        road_mask = output['out'].cpu().detach().numpy()
+        save_road_mask(road_mask, image_name)
 
 for image_name in os.listdir(data_folder):
-    if image_name.endswith(".jpg"): 
+    if image_name.endswith(".jpg"):  
         image_path = os.path.join(data_folder, image_name)
         process_image(image_path, image_name)
 
