@@ -21,7 +21,6 @@ os.makedirs(os.path.join(output_folder, "free_road_masks"), exist_ok=True)
 segmentation_model = fcn_resnet50(pretrained=True).to(device).eval()
 detection_model = fasterrcnn_resnet50_fpn(pretrained=True).to(device).eval()
 
-# Assuming 'road' class is index 1 in the segmentation model output
 ROAD_CLASS_INDEX = 1
 
 def load_image(image_path):
@@ -53,27 +52,23 @@ def save_bounding_boxes(bboxes, labels, image_name):
 
 def save_road_mask(road_mask, image_name):
     road_mask = road_mask[0].cpu().detach().numpy()
-    road_mask = (road_mask == ROAD_CLASS_INDEX).astype(np.uint8)  # Threshold to extract road class
+    road_mask = (road_mask == ROAD_CLASS_INDEX).astype(np.uint8)  
     road_mask_img = Image.fromarray(road_mask)
     road_mask_img.save(os.path.join(output_folder, "free_road_masks", f"{image_name}_road_mask.png"))
 
 def process_image(image_path, image_name):
     image = load_image(image_path)
     
-    # Segmentation Model (FCN)
     with torch.no_grad():
         output = segmentation_model(image)
         save_segmentation_mask(output['out'], image_name)
     
-    # Detection Model (Faster R-CNN)
     with torch.no_grad():
         detection_output = detection_model(image)
         save_bounding_boxes(detection_output[0]['boxes'], detection_output[0]['labels'], image_name)
 
-    # Road Mask: Using segmentation model to extract road mask
     road_mask = output['out']
-    road_mask = torch.argmax(road_mask, dim=1)  # Get the class with highest probability
-    save_road_mask(road_mask, image_name)
+    road_mask = torch.argmax(road_mask, dim=1)  
 
 for image_name in os.listdir(data_folder):
     if image_name.endswith(".jpg"): 
