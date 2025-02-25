@@ -96,7 +96,7 @@ def draw_boxes(img, preds, threshold=0.5):
     plt.show()
 
 if __name__ == "__main__":
-    dataset = SimpleDataset("data/images", "data/labels")
+    dataset = SimpleDataset("[images here]", "data/labels")
     dataloader = DataLoader(dataset, batch_size=2, shuffle=True, collate_fn=collate_fn)
     model = SimpleDetector(num_classes=2)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
