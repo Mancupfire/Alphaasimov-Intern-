@@ -35,7 +35,7 @@ class DetectionHead(nn.Module):
         batch_size, channels, h, w = x.shape
         x = x.view(batch_size, self.num_anchors, 5 + self.num_classes, h, w)
         x = x.permute(0, 1, 3, 4, 2)
-        return x
+        return torch.sigmoid(x)
 
 class SimpleDetector(nn.Module):
     def __init__(self, num_classes=2, num_anchors=3):
@@ -53,7 +53,7 @@ class SimpleDataset(Dataset):
         self.img_dir = img_dir
         self.label_dir = label_dir
         self.img_size = img_size
-        self.img_files = sorted(os.listdir(img_dir))
+        self.img_files = sorted([f for f in os.listdir(img_dir) if f.endswith('.jpg')])
 
     def __getitem__(self, index):
         img_path = os.path.join(self.img_dir, self.img_files[index])
@@ -73,10 +73,43 @@ class SimpleDataset(Dataset):
 
 def collate_fn(batch):
     imgs, labels = zip(*batch)
-    return torch.stack(imgs), labels
+    max_labels = max([len(l) for l in labels])
+    padded_labels = [torch.cat([l, torch.zeros(max_labels - l.size(0), 5)]) if l.size(0) > 0 else torch.zeros(max_labels, 5) for l in labels]
+    return torch.stack(imgs), torch.stack(padded_labels)
 
-def simple_loss(pred, targets):
-    return torch.tensor(0.0)
+def yolo_loss(preds, targets, grid_size=160, num_anchors=3, num_classes=2):
+    batch_size = preds.size(0)
+    obj_loss = 0
+    noobj_loss = 0
+    box_loss = 0
+    cls_loss = 0
+
+    for b in range(batch_size):
+        target = targets[b]
+        pred = preds[b]
+        for t in range(target.size(0)):
+            if target[t].sum() == 0:
+                continue
+            tx, ty, tw, th = target[t, 1:5]
+            cls = int(target[t, 0])
+            gx, gy = int(tx * grid_size), int(ty * grid_size)
+            anchor_idx = 0
+            pred_box = pred[anchor_idx, gx, gy, :5]
+            pred_cls = pred[anchor_idx, gx, gy, 5:]
+
+            obj_loss += F.binary_cross_entropy(pred_box[4], torch.tensor(1.0))
+            box_loss += F.mse_loss(pred_box[:4], target[t, 1:5])
+            cls_loss += F.cross_entropy(pred_cls, torch.tensor(cls))
+
+        noobj_mask = torch.ones(grid_size, grid_size)
+        for t in range(target.size(0)):
+            if target[t].sum() > 0:
+                tx, ty = int(target[t, 1] * grid_size), int(target[t, 2] * grid_size)
+                noobj_mask[tx, ty] = 0
+        noobj_loss += F.binary_cross_entropy(pred[:, :, :, 4], noobj_mask)
+
+    total_loss = obj_loss + 5 * box_loss + cls_loss + 0.5 * noobj_loss
+    return total_loss / batch_size if batch_size > 0 else total_loss
 
 def draw_boxes(img, preds, threshold=0.5):
     img = img.permute(1, 2, 0).numpy() * 255
@@ -96,19 +129,26 @@ def draw_boxes(img, preds, threshold=0.5):
     plt.show()
 
 if __name__ == "__main__":
-    dataset = SimpleDataset("[images here]", "data/labels")
+    dataset = SimpleDataset("data/images", "data/labels")
     dataloader = DataLoader(dataset, batch_size=2, shuffle=True, collate_fn=collate_fn)
     model = SimpleDetector(num_classes=2)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     model.train()
     for epoch in range(5):
+        total_loss = 0
         for imgs, labels in dataloader:
             imgs = imgs.to(device)
+            labels = labels.to(device)
             preds = model(imgs)
-            loss = simple_loss(preds, labels)
-            print(f"Epoch {epoch}, Loss: {loss.item()}")
+            loss = yolo_loss(preds, labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+        print(f"Epoch {epoch}, Loss: {total_loss / len(dataloader)}")
 
     model.eval()
     with torch.no_grad():
