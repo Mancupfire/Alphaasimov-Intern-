@@ -7,7 +7,7 @@ import cv2
 import os
 
 
-def unet_model(input_size=(480, 480, 3)):
+def unet_model(input_size=(256, 256, 3)):
     inputs = Input(input_size)
     
     # Encoder (Phần mã hóa)
@@ -58,13 +58,12 @@ def unet_model(input_size=(480, 480, 3)):
     model = Model(inputs=[inputs], outputs=[outputs])
     return model
 
-def preprocess_image(image_path, target_size=(480, 480)):
+def preprocess_image(image_path, target_size=(256, 256)):
     image = cv2.imread(image_path)
     if image is None:
         raise ValueError(f"Không thể đọc file ảnh: {image_path}")
     # Chuyển BGR -> RGB (tuỳ yêu cầu mô hình, thường RGB là chuẩn)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    # Resize về target_size (480x480)
     image = cv2.resize(image, target_size)
     # Chuẩn hoá pixel về [0,1]
     image = image.astype('float32') / 255.0
@@ -72,12 +71,11 @@ def preprocess_image(image_path, target_size=(480, 480)):
 
 
 def predict_segmentation(model, image_path, threshold=0.5):
-    # Ảnh đầu vào có thể bất kỳ size => preprocess_image sẽ resize về 480x480
-    image = preprocess_image(image_path, target_size=(480, 480))
-    # Thêm chiều batch => (1, 480, 480, 3)
+    image = preprocess_image(image_path, target_size=(256, 256))
+    # Thêm chiều batch => (1, 256, 256 3)
     image_input = np.expand_dims(image, axis=0)
     
-    pred = model.predict(image_input)[0, ..., 0]  # shape (480, 480)
+    pred = model.predict(image_input)[0, ..., 0]  # shape (256, 256)
     
     # Chuyển sang mask nhị phân (0 hoặc 1) dựa trên threshold
     binary_mask = (pred > threshold).astype(np.uint8)
@@ -107,15 +105,10 @@ def train_model(model, X_train, Y_train, batch_size=2, epochs=10):
 
 
 if __name__ == '__main__':
-    # Khởi tạo U-Net với input_size 480x480
-    model = unet_model(input_size=(480,480,3))
-    # Compile mô hình
+    model = unet_model(input_size=(256,256,3))
     model.compile(optimizer=Adam(learning_rate=1e-4), loss='binary_crossentropy', metrics=['accuracy'])
 
-    # -------------------------------------------------
-    #  (C) DỰ ĐOÁN CHO THƯ MỤC ẢNH ĐẦU VÀO
-    # -------------------------------------------------
-    # Folder chứa ảnh đầu vào
+
     input_folder = r"D:\data_use\2024_11_22_08_52_03\camera_front"
     
     # Folder lưu output
@@ -124,7 +117,7 @@ if __name__ == '__main__':
         os.makedirs(output_folder)
     
     # Ngưỡng (threshold) để chuyển xác suất -> nhị phân
-    THRESHOLD = 0.5  # Bạn có thể thử 0.3 hoặc 0.2 nếu mask bị đen
+    THRESHOLD = 0.5  
     
     # Lấy danh sách file ảnh trong folder (lọc theo đuôi ảnh)
     image_files = [
@@ -137,9 +130,7 @@ if __name__ == '__main__':
         image_path = os.path.join(input_folder, file_name)
         try:
             mask = predict_segmentation(model, image_path, threshold=THRESHOLD)
-            # mask là mảng 0/1 cỡ (480,480)
             mask_to_save = (mask * 255).astype(np.uint8)
-            # Lưu mask với tên mask_{idx}.png (hoặc bạn có thể tùy chỉnh)
             output_mask_path = os.path.join(output_folder, f"mask_{idx}.png")
             cv2.imwrite(output_mask_path, mask_to_save)
             print(f"Processed '{file_name}' -> '{output_mask_path}'")
