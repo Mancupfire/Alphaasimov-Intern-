@@ -52,7 +52,6 @@ def unet_model(input_size=(256, 256, 3)):
     c9 = Conv2D(64, (3,3), activation='relu', padding='same')(u9)
     c9 = Conv2D(64, (3,3), activation='relu', padding='same')(c9)
     
-    # Lớp output: sigmoid => xác suất cho lớp "có đường" (1)
     outputs = Conv2D(1, (1,1), activation='sigmoid')(c9)
     
     model = Model(inputs=[inputs], outputs=[outputs])
@@ -62,24 +61,21 @@ def preprocess_image(image_path, target_size=(256, 256)):
     image = cv2.imread(image_path)
     if image is None:
         raise ValueError(f"Không thể đọc file ảnh: {image_path}")
-    # Chuyển BGR -> RGB (tuỳ yêu cầu mô hình, thường RGB là chuẩn)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = cv2.resize(image, target_size)
-    # Chuẩn hoá pixel về [0,1]
     image = image.astype('float32') / 255.0
     return image
 
 
 def predict_segmentation(model, image_path, threshold=0.5):
     image = preprocess_image(image_path, target_size=(256, 256))
-    # Thêm chiều batch => (1, 256, 256 3)
     image_input = np.expand_dims(image, axis=0)
     
     pred = model.predict(image_input)[0, ..., 0]  # shape (256, 256)
     
-    # Chuyển sang mask nhị phân (0 hoặc 1) dựa trên threshold
     binary_mask = (pred > threshold).astype(np.uint8)
-    return binary_mask
+    binary_map = binary_mask * 255
+    return binary_map
 
 
 def evaluate_model(model, image_paths, ground_truth_masks, threshold=0.5):
@@ -105,48 +101,32 @@ def train_model(model, X_train, Y_train, batch_size=2, epochs=10):
 
 
 if __name__ == '__main__':
-    model = unet_model(input_size=(256,256,3))
+    model = unet_model(input_size=(256, 256, 3))
     model.compile(optimizer=Adam(learning_rate=1e-4), loss='binary_crossentropy', metrics=['accuracy'])
 
-
     input_folder = r"D:\data_use\2024_11_22_08_52_03\camera_front"
-    
-    # Folder lưu output
-    output_folder = "Output_result"
+
+    # Output folder to save results
+    output_folder = "Output_results_here"
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    
-    # Ngưỡng (threshold) để chuyển xác suất -> nhị phân
-    THRESHOLD = 0.5  
-    
-    # Lấy danh sách file ảnh trong folder (lọc theo đuôi ảnh)
+
+    # Threshold to convert probabilities to binary
+    THRESHOLD = 0.5  # Try 0.3 or 0.2 if the mask is too dark
+
     image_files = [
         f for f in os.listdir(input_folder)
         if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))
     ]
-    
-    # Xử lý lần lượt các ảnh, đánh số thứ tự output
+
     for idx, file_name in enumerate(image_files, start=1):
         image_path = os.path.join(input_folder, file_name)
         try:
+            # Predict segmentation mask with the given threshold
             mask = predict_segmentation(model, image_path, threshold=THRESHOLD)
-            mask_to_save = (mask * 255).astype(np.uint8)
             output_mask_path = os.path.join(output_folder, f"mask_{idx}.png")
-            cv2.imwrite(output_mask_path, mask_to_save)
+            cv2.imwrite(output_mask_path, mask)
             print(f"Processed '{file_name}' -> '{output_mask_path}'")
         except Exception as e:
-            print(f"Lỗi khi xử lý file {file_name}: {e}")
-    
-  
-  
-    # test_image_paths = [
-    #     os.path.join(input_folder, 'anh_test1.jpg'),
-    #     os.path.join(input_folder, 'anh_test2.jpg'),
-    #     os.path.join(input_folder, 'anh_test3.jpg')
-    # ]
-    #
-    # ground_truth_masks phải có cùng kích thước 480x480
+            print(f"Error processing file {file_name}: {e}")
 
-    # ground_truth_masks = [np.zeros((480,480), dtype=np.uint8) for _ in test_image_paths]
-    # mean_iou = evaluate_model(model, test_image_paths, ground_truth_masks, threshold=THRESHOLD)
-    # print(f"Mean IoU trên tập kiểm tra: {mean_iou:.4f}")
