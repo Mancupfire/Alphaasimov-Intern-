@@ -3,26 +3,21 @@ import json
 from ultralytics import YOLO
 import torch
 
-# Kiểm tra device: sử dụng CUDA nếu có, ngược lại dùng CPU.
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Folder cha chứa các folder camera cần duyệt.
 parent_folder = r"D:\data_use\2024_11_22_08_52_03"
 
-# Lấy danh sách các folder camera. Ở đây giả sử các folder có tên bắt đầu bằng "camera".
 camera_folders = [
     folder for folder in os.listdir(parent_folder)
     if os.path.isdir(os.path.join(parent_folder, folder)) and folder.startswith("camera")
 ]
 
-# Khởi tạo model YOLO với trọng số đã cho.
 model = YOLO("yolov8s.pt")
 
 # Giá trị ngưỡng mặc định của YOLO (confidence threshold). Mặc định thường là 0.25.
 default_confidence_threshold = 0.25
 print(f"Default confidence threshold: {default_confidence_threshold}")
 
-# Danh sách các class ID tương ứng với đối tượng xe cộ.
 vehicle_class_ids = [1, 2, 3, 4, 5, 6, 7, 8]
 class_names = {
     1: "bicycle",
