@@ -17,18 +17,75 @@ from auto_data_checking import discontinuity_detector
 
 
 total_sample = 0
+import matplotlib.pyplot as plt
+import pandas as pd
+import cv2
+
+def plot_groundtruth_table(gt_df: pd.DataFrame, title: str = "Ground Truth Annotations"):
+    n_rows = len(gt_df)
+    height = max(2, 0.5 * n_rows + 1)
+    fig, ax = plt.subplots(figsize=(8, height))
+    ax.axis('off')
+    ax.set_title(title, pad=20)
+    table = ax.table(
+        cellText=gt_df.values,
+        colLabels=gt_df.columns,
+        cellLoc='center',
+        loc='center'
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1, 1.5)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_image_with_gt_and_table(image_path: str, gt_df: pd.DataFrame, title: str = "GT + Table"):
+    img = cv2.imread(image_path)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    n_rows = len(gt_df)
+    tbl_height = max(2, 0.5 * n_rows + 1)
+    fig, (ax_img, ax_tbl) = plt.subplots(1, 2, figsize=(12, max(6, tbl_height)))
+
+    ax_img.imshow(img)
+    ax_img.axis('off')
+    ax_img.set_title("Ground-Truth Boxes")
+    for _, row in gt_df.iterrows():
+        xmin, ymin, xmax, ymax = row['xmin'], row['ymin'], row['xmax'], row['ymax']
+        cls = str(row['class'])
+        rect = plt.Rectangle(
+            (xmin, ymin),
+            xmax - xmin, ymax - ymin,
+            edgecolor='red', facecolor='none', linewidth=2
+        )
+        ax_img.add_patch(rect)
+        ax_img.text(
+            xmin, ymin - 5, cls,
+            color='white', backgroundcolor='red', fontsize=10
+        )
+
+    ax_tbl.axis('off')
+    ax_tbl.set_title("Annotation Table", pad=20)
+    table = ax_tbl.table(
+        cellText=gt_df.values,
+        colLabels=gt_df.columns,
+        cellLoc='center',
+        loc='center'
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1, 1.5)
+
+    plt.tight_layout()
+    plt.show()
+
 
 def convert_lat_long_to_utm(lat, long):
     utm_coords = utm.from_latlon(lat, long)
     return utm_coords[0], utm_coords[1]
 
 def euler_from_quaternion(x, y, z, w):
-    """
-    Convert a quaternion into euler angles (roll, pitch, yaw)
-    roll is rotation around x in radians (counterclockwise)
-    pitch is rotation around y in radians (counterclockwise)
-    yaw is rotation around z in radians (counterclockwise)
-    """
     t0 = +2.0 * (w * x + y * z)
     t1 = +1.0 - 2.0 * (x * x + y * y)
     roll_x = np.arctan2(t0, t1)
